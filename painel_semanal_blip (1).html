@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Semanal · Campanha 360 · Blip</title>
+<style>
+  :root {
+    --bg: #F8FAFC;
+    --surface: #FFFFFF;
+    --border: #E2E8F0;
+    --border-strong: #CBD5E1;
+    --text: #0F172A;
+    --text-mute: #475569;
+    --text-faint: #94A3B8;
+    --blip-blue: #1A4FE6;
+    --blip-dark: #0B1B36;
+    --green: #166534;
+    --green-bg: #DCFCE7;
+    --amber: #92400E;
+    --amber-bg: #FEF3C7;
+    --red: #991B1B;
+    --red-bg: #FEE2E2;
+    --grey-bg: #F1F5F9;
+    --grey-text: #475569;
+    --purple: #5B21B6;
+    --purple-bg: #EDE9FE;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", system-ui, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 32px 24px 80px;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+  .container { max-width: 1080px; margin: 0 auto; }
+  header { margin-bottom: 24px; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; flex-wrap: wrap; gap: 12px; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0; color: var(--blip-dark); }
+  .week-pill { font-size: 13px; color: var(--text-mute); background: var(--surface); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); }
+  .subtitle { font-size: 14px; color: var(--text-mute); margin: 0; }
+  .controls { display: flex; gap: 8px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+  .controls select, .controls button {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; font-size: 13px; color: var(--text); cursor: pointer; font-family: inherit;
+  }
+  .controls button:hover { background: var(--grey-bg); }
+  .controls .reload { color: var(--blip-blue); border-color: var(--blip-blue); }
+  .status-bar { font-size: 12px; color: var(--text-faint); margin-top: 12px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 24px 0; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .stat-label { font-size: 12px; color: var(--text-mute); margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 500; }
+  .stat-value { font-size: 28px; font-weight: 600; margin: 0; color: var(--blip-dark); line-height: 1.1; }
+  .stat-sub { font-size: 12px; color: var(--text-faint); margin: 4px 0 0; }
+  .block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 16px; }
+  .block-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+  .block-title { font-size: 18px; font-weight: 600; margin: 0; color: var(--blip-dark); display: flex; align-items: center; gap: 10px; }
+  .block-num { width: 26px; height: 26px; border-radius: 50%; background: var(--blip-blue); color: white; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; }
+  .block-sub { font-size: 13px; color: var(--text-mute); margin: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-weight: 500; font-size: 12px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.4px; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--border); }
+  th.num { text-align: right; }
+  td { padding: 12px 12px 12px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: none; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .pill-green { background: var(--green-bg); color: var(--green); }
+  .pill-amber { background: var(--amber-bg); color: var(--amber); }
+  .pill-red { background: var(--red-bg); color: var(--red); }
+  .pill-grey { background: var(--grey-bg); color: var(--grey-text); }
+  .pill-purple { background: var(--purple-bg); color: var(--purple); }
+  .delta-pos { color: var(--green); font-weight: 500; }
+  .delta-neg { color: var(--red); font-weight: 500; }
+  .delta-flat { color: var(--text-faint); }
+  .alert { margin-top: 16px; padding: 12px 14px; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+  .alert-amber { background: var(--amber-bg); color: var(--amber); }
+  .alert-red { background: var(--red-bg); color: var(--red); }
+  .alert strong { font-weight: 600; }
+  .abm-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+  .abm-card { padding: 12px 14px; border-radius: 10px; }
+  .abm-card.green { background: #ECFDF5; }
+  .abm-card.blue { background: #EFF6FF; }
+  .abm-card.purple { background: var(--purple-bg); }
+  .abm-card-label { font-size: 12px; margin: 0 0 4px; font-weight: 500; }
+  .abm-card-value { font-size: 22px; font-weight: 600; margin: 0; }
+  .abm-card.green .abm-card-label { color: #047857; }
+  .abm-card.green .abm-card-value { color: #064E3B; }
+  .abm-card.blue .abm-card-label { color: #1D4ED8; }
+  .abm-card.blue .abm-card-value { color: #1E3A8A; }
+  .abm-card.purple .abm-card-label { color: #6D28D9; }
+  .abm-card.purple .abm-card-value { color: #4C1D95; }
+  .provoc-list { display: flex; flex-direction: column; gap: 12px; }
+  .provoc { background: #FAFAFA; border: 1px solid var(--border); border-left: 3px solid var(--blip-blue); border-radius: 6px; padding: 14px 16px; }
+  .provoc-title { font-size: 14px; font-weight: 600; margin: 0 0 6px; color: var(--blip-dark); }
+  .provoc-text { font-size: 13px; color: var(--text-mute); margin: 0; line-height: 1.6; }
+  .loading { text-align: center; padding: 60px 20px; color: var(--text-mute); }
+  .error { padding: 20px; background: var(--red-bg); color: var(--red); border-radius: 8px; font-size: 14px; line-height: 1.6; }
+  .error code { background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; font-family: 'Monaco', 'Menlo', monospace; font-size: 12px; }
+  footer { margin-top: 32px; padding: 16px 0; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--text-faint); }
+  footer a { color: var(--blip-blue); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  @media (max-width: 720px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .abm-cards { grid-template-columns: 1fr; }
+    body { padding: 20px 16px 60px; }
+    h1 { font-size: 20px; }
+    .block { padding: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <div class="header-top">
+    <h1>Painel semanal · Campanha 360</h1>
+    <div class="week-pill" id="week-pill">Carregando…</div>
+  </div>
+  <p class="subtitle">Status operacional · gestão recorrente · não é análise de impacto</p>
+
+  <div class="controls">
+    <label style="font-size: 13px; color: var(--text-mute);">Vertical:</label>
+    <select id="filter-vertical"><option value="">Todas</option></select>
+    <label style="font-size: 13px; color: var(--text-mute);">Quarter:</label>
+    <select id="filter-q"><option value="">Todos</option></select>
+    <button class="reload" onclick="loadData()">↻ Atualizar dados</button>
+  </div>
+  <p class="status-bar" id="status-bar">Pronto.</p>
+</header>
+
+<div id="content">
+  <div class="loading">Carregando dados da planilha…</div>
+</div>
+
+<footer>
+  Fonte única: <a href="https://docs.google.com/spreadsheets/d/1_EvYDJgWH2g470ZpJomQMdAnNHyhVak2mC5xY-F6jS4/edit" target="_blank">planilha gestao_acoes_v1</a>
+  · atualizado por <span id="last-update">—</span>
+  · <a href="#" onclick="loadData(); return false;">recarregar</a>
+</footer>
+
+</div>
+
+<script>
+const CSV_URL = "https://docs.google.com/spreadsheets/d/1_EvYDJgWH2g470ZpJomQMdAnNHyhVak2mC5xY-F6jS4/export?format=csv&gid=1808649073";
+
+let RAW_DATA = [];
+let CURRENT_FILTER = { vertical: "", q: "" };
+
+function parseCSV(text) {
+  const rows = [];
+  let cur = [], field = "", inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"' && text[i+1] === '"') { field += '"'; i++; }
+      else if (c === '"') { inQuotes = false; }
+      else { field += c; }
+    } else {
+      if (c === '"') { inQuotes = true; }
+      else if (c === ',') { cur.push(field); field = ""; }
+      else if (c === '\n') { cur.push(field); rows.push(cur); cur = []; field = ""; }
+      else if (c === '\r') { /* skip */ }
+      else { field += c; }
+    }
+  }
+  if (field || cur.length) { cur.push(field); rows.push(cur); }
+  return rows.filter(r => r.some(c => c && c.trim() !== ""));
+}
+
+function findHeaderRow(rows) {
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const r = rows[i].map(c => (c || "").toLowerCase());
+    if (r.some(c => c.includes("vertical")) && r.some(c => c.includes("entreg"))) return i;
+  }
+  return -1;
+}
+
+function findCol(headers, candidates) {
+  for (let i = 0; i < headers.length; i++) {
+    const h = (headers[i] || "").toLowerCase();
+    for (const cand of candidates) {
+      if (h.includes(cand.toLowerCase())) return i;
+    }
+  }
+  return -1;
+}
+
+function parseNumber(v) {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  if (s === "" || s === "—" || s === "-") return null;
+  const cleaned = s.replace(/\./g, "").replace(",", ".").replace(/[^\d.\-]/g, "");
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? null : n;
+}
+
+function classifyStatus(s) {
+  const x = (s || "").toLowerCase();
+  if (x.includes("conclu")) return "concluido";
+  if (x.includes("andament")) return "andamento";
+  if (x.includes("iniciar")) return "iniciar";
+  if (x.includes("parad") || x.includes("bloque")) return "parado";
+  if (x.includes("aten") || x.includes("risco")) return "atencao";
+  return "outro";
+}
+
+function statusPill(s) {
+  const c = classifyStatus(s);
+  const map = {
+    concluido: ["pill pill-green", "Concluído"],
+    andamento: ["pill pill-amber", "Em andamento"],
+    iniciar: ["pill pill-grey", "A iniciar"],
+    parado: ["pill pill-red", "Parado"],
+    atencao: ["pill pill-amber", "Atenção"]
+  };
+  const [cls, label] = map[c] || ["pill pill-grey", s || "—"];
+  return `<span class="${cls}">${label}</span>`;
+}
+
+function formatNumber(n, isPct) {
+  if (n === null || n === undefined || isNaN(n)) return "—";
+  if (isPct) return (n * 100).toFixed(0) + "%";
+  if (Math.abs(n) >= 1000) return n.toLocaleString("pt-BR");
+  if (Number.isInteger(n)) return String(n);
+  return n.toFixed(1);
+}
+
+function processData(rows) {
+  const hRow = findHeaderRow(rows);
+  if (hRow < 0) throw new Error("Não encontrei a linha de cabeçalho. Verifique se a aba publicada tem as colunas Vertical, Canal, Entregável, Status, Meta, Realizado.");
+  const headers = rows[hRow];
+  const cols = {
+    vertical: findCol(headers, ["vertical", "segmento"]),
+    canal: findCol(headers, ["canal"]),
+    mes: findCol(headers, ["mês", "mes"]),
+    q: findCol(headers, ["q ", "quarter", "trimestre"]),
+    entregavel: findCol(headers, ["entreg"]),
+    owner: findCol(headers, ["owner", "responsa"]),
+    status: findCol(headers, ["status"]),
+    kpi: findCol(headers, ["kpi"]),
+    meta: findCol(headers, ["meta"]),
+    realizado: findCol(headers, ["realiz"]),
+    obs: findCol(headers, ["observa", "contexto"])
+  };
+  if (cols.q === -1) {
+    for (let i = 0; i < headers.length; i++) {
+      if ((headers[i] || "").trim().toLowerCase() === "q") { cols.q = i; break; }
+    }
+  }
+  const data = [];
+  for (let i = hRow + 1; i < rows.length; i++) {
+    const r = rows[i];
+    const ent = (r[cols.entregavel] || "").trim();
+    const ver = (r[cols.vertical] || "").trim();
+    if (!ent || !ver) continue;
+    data.push({
+      vertical: ver,
+      canal: (r[cols.canal] || "").trim(),
+      mes: (r[cols.mes] || "").trim(),
+      q: (r[cols.q] || "").trim(),
+      entregavel: ent,
+      owner: (r[cols.owner] || "").trim(),
+      status: (r[cols.status] || "").trim(),
+      kpi: (r[cols.kpi] || "").trim(),
+      meta: parseNumber(r[cols.meta]),
+      realizado: parseNumber(r[cols.realizado]),
+      obs: (r[cols.obs] || "").trim()
+    });
+  }
+  return data;
+}
+
+function applyFilter(data) {
+  return data.filter(d => {
+    if (CURRENT_FILTER.vertical && d.vertical !== CURRENT_FILTER.vertical) return false;
+    if (CURRENT_FILTER.q && d.q !== CURRENT_FILTER.q) return false;
+    return true;
+  });
+}
+
+function populateFilters(data) {
+  const vSel = document.getElementById("filter-vertical");
+  const qSel = document.getElementById("filter-q");
+  const verticais = [...new Set(data.map(d => d.vertical).filter(Boolean))].sort();
+  const quarters = [...new Set(data.map(d => d.q).filter(Boolean))].sort();
+  vSel.innerHTML = '<option value="">Todas</option>' + verticais.map(v => `<option value="${v}">${v}</option>`).join("");
+  qSel.innerHTML = '<option value="">Todos</option>' + quarters.map(q => `<option value="${q}">${q}</option>`).join("");
+  vSel.value = CURRENT_FILTER.vertical;
+  qSel.value = CURRENT_FILTER.q;
+  vSel.onchange = () => { CURRENT_FILTER.vertical = vSel.value; render(); };
+  qSel.onchange = () => { CURRENT_FILTER.q = qSel.value; render(); };
+}
+
+function buildBlock1(data) {
+  const counts = { concluido: 0, andamento: 0, iniciar: 0, parado: 0, atencao: 0 };
+  data.forEach(d => { counts[classifyStatus(d.status)] = (counts[classifyStatus(d.status)] || 0) + 1; });
+  const semPreench = data.filter(d => {
+    const c = classifyStatus(d.status);
+    return (c === "andamento" || c === "concluido") && d.meta !== null && d.realizado === null;
+  });
+  const paradas = data.filter(d => classifyStatus(d.status) === "parado");
+  const semOwner = data.filter(d => !d.owner || d.owner.trim() === "");
+
+  const rows = data.map(d => `
+    <tr>
+      <td><strong>${d.canal || "—"}</strong></td>
+      <td>${d.entregavel}</td>
+      <td>${d.owner || "<span style='color:var(--text-faint)'>sem owner</span>"}</td>
+      <td>${statusPill(d.status)}</td>
+    </tr>
+  `).join("");
+
+  let alerts = "";
+  if (paradas.length) {
+    alerts += `<div class="alert alert-red"><strong>${paradas.length} ações paradas:</strong> ${paradas.map(p => p.entregavel).slice(0, 3).join(" · ")}${paradas.length > 3 ? " · …" : ""}</div>`;
+  }
+  if (semOwner.length) {
+    alerts += `<div class="alert alert-amber"><strong>${semOwner.length} sem owner definido:</strong> ${semOwner.map(p => p.entregavel).slice(0, 2).join(" · ")}${semOwner.length > 2 ? " · …" : ""}</div>`;
+  }
+  if (semPreench.length) {
+    alerts += `<div class="alert alert-amber"><strong>${semPreench.length} ações sem realizado preenchido:</strong> ${semPreench.map(p => p.entregavel).slice(0, 2).join(" · ")}${semPreench.length > 2 ? " · …" : ""}</div>`;
+  }
+
+  return `
+    <div class="block">
+      <div class="block-header">
+        <h2 class="block-title"><span class="block-num">1</span> Status da execução</h2>
+        <span class="pill pill-grey">${data.length} ações no recorte</span>
+      </div>
+      <table>
+        <thead><tr><th>Canal</th><th>Entregável</th><th>Owner</th><th>Status</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="4" style="text-align:center;color:var(--text-faint);padding:20px;">Sem ações no recorte selecionado</td></tr>'}</tbody>
+      </table>
+      ${alerts}
+    </div>
+  `;
+}
+
+function buildBlock2(data) {
+  const withKpi = data.filter(d => d.kpi);
+  const rows = withKpi.map(d => {
+    let pct = null, pctClass = "delta-flat", pctText = "—";
+    if (d.meta !== null && d.realizado !== null && d.meta !== 0) {
+      pct = d.realizado / d.meta;
+      const pctRound = Math.round(pct * 100);
+      pctText = pctRound + "%";
+      if (pct >= 0.9) pctClass = "delta-pos";
+      else if (pct >= 0.5) pctClass = "delta-flat";
+      else pctClass = "delta-neg";
+    } else if (d.meta === null && d.realizado === null) {
+      pctText = "<span style='color:var(--text-faint);font-size:12px'>sem baseline</span>";
+    }
+    const isPct = (d.kpi || "").toLowerCase().includes("rate") || (d.kpi || "").toLowerCase().includes("taxa") || (d.kpi || "").toLowerCase().includes("%");
+    return `
+      <tr>
+        <td><strong>${d.kpi}</strong><div style="font-size:12px;color:var(--text-faint);margin-top:2px;">${d.canal} · ${d.entregavel}</div></td>
+        <td class="num">${formatNumber(d.realizado, isPct)}</td>
+        <td class="num">${formatNumber(d.meta, isPct)}</td>
+        <td class="num ${pctClass}">${pctText}</td>
+      </tr>
+    `;
+  }).join("");
+  return `
+    <div class="block">
+      <div class="block-header">
+        <h2 class="block-title"><span class="block-num">2</span> Movimento de KPI</h2>
+        <p class="block-sub">Realizado vs meta · variação semanal exige histórico de duas semanas</p>
+      </div>
+      <table>
+        <thead><tr><th>KPI</th><th class="num">Realizado</th><th class="num">Meta</th><th class="num">% ating.</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="4" style="text-align:center;color:var(--text-faint);padding:20px;">Sem KPIs no recorte</td></tr>'}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function buildBlock3(data) {
+  const abm = data.filter(d => (d.canal || "").toLowerCase().includes("abm"));
+  if (!abm.length) {
+    return `
+      <div class="block">
+        <div class="block-header">
+          <h2 class="block-title"><span class="block-num">3</span> Cruzamento com ABM</h2>
+        </div>
+        <div class="alert alert-amber">Sem ações ABM no recorte selecionado. Cruzamento com planilha ABM Acquisition fica pendente até disparar plays.</div>
+      </div>
+    `;
+  }
+  const totalContas = abm.reduce((s, d) => s + (d.realizado || 0), 0);
+  const metaContas = abm.reduce((s, d) => s + (d.meta || 0), 0);
+  const semDado = abm.filter(d => d.realizado === null || d.realizado === 0);
+
+  const linhasAbm = abm.map(d => {
+    const sub = d.entregavel.includes("Bancos") ? "Bancos" : d.entregavel.includes("Plataformas") ? "Plataformas" : d.entregavel.includes("Habilitadores") ? "Habilitadores" : (d.entregavel || "");
+    return `
+      <tr>
+        <td><strong>${sub}</strong><div style="font-size:12px;color:var(--text-faint);">${d.kpi || "—"}</div></td>
+        <td class="num">${d.realizado !== null ? d.realizado : '<span style="color:var(--text-faint)">—</span>'}</td>
+        <td class="num">${d.meta !== null ? d.meta : '<span style="color:var(--text-faint)">—</span>'}</td>
+        <td>${statusPill(d.status)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  let alert = "";
+  if (semDado.length) {
+    alert = `<div class="alert alert-amber"><strong>Atenção:</strong> ${semDado.length} play(s) ABM sem dado disponível — cruzamento com Acquisition fica parcial. Conferir gap aberto com Growth.</div>`;
+  }
+
+  return `
+    <div class="block">
+      <div class="block-header">
+        <h2 class="block-title"><span class="block-num">3</span> Cruzamento com ABM Acquisition</h2>
+        <p class="block-sub">Score de engajamento (3 / 6 / 9) como proxy enquanto CRM Setup está pendente com RevOps</p>
+      </div>
+      <div class="abm-cards">
+        <div class="abm-card green">
+          <p class="abm-card-label">Plays ativas</p>
+          <p class="abm-card-value">${abm.length}</p>
+        </div>
+        <div class="abm-card blue">
+          <p class="abm-card-label">Contas tocadas (acumulado)</p>
+          <p class="abm-card-value">${totalContas || 0}</p>
+        </div>
+        <div class="abm-card purple">
+          <p class="abm-card-label">Meta total de contas</p>
+          <p class="abm-card-value">${metaContas || "—"}</p>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Modelo / Play</th><th class="num">Realizado</th><th class="num">Meta</th><th>Status</th></tr></thead>
+        <tbody>${linhasAbm}</tbody>
+      </table>
+      ${alert}
+    </div>
+  `;
+}
+
+function buildBlock4(data) {
+  const provoc = [];
+  const paradas = data.filter(d => classifyStatus(d.status) === "parado");
+  paradas.slice(0, 2).forEach(p => {
+    provoc.push({
+      title: `${p.canal}: ${p.entregavel} parado`,
+      text: `${p.obs || "Sem observação registrada."} Vale destravar esta semana, redistribuir para outro canal, ou descontinuar? Já pensamos em quem assume?`
+    });
+  });
+  const semOwner = data.filter(d => !d.owner);
+  if (semOwner.length) {
+    provoc.push({
+      title: `${semOwner.length} entregável(is) sem owner`,
+      text: `${semOwner.map(s => s.entregavel).slice(0, 2).join(" · ")}. Sem responsável, não vão sair. Já pensamos em quem assume na próxima semana?`
+    });
+  }
+  const baixaPerf = data.filter(d => d.meta !== null && d.realizado !== null && d.meta > 0 && (d.realizado / d.meta) < 0.5);
+  baixaPerf.slice(0, 2).forEach(p => {
+    provoc.push({
+      title: `${p.kpi || p.entregavel} abaixo de 50% da meta`,
+      text: `${p.obs || `Realizado ${p.realizado} vs meta ${p.meta}.`} Vale tentar outro caminho ou aceitar a meta como inviável e replanejar?`
+    });
+  });
+  const semPreench = data.filter(d => classifyStatus(d.status) === "andamento" && d.meta !== null && d.realizado === null);
+  if (semPreench.length) {
+    provoc.push({
+      title: `${semPreench.length} ação(ões) em andamento sem dado preenchido`,
+      text: `Owners: ${[...new Set(semPreench.map(s => s.owner).filter(Boolean))].join(", ") || "não identificados"}. Já pensamos em puxar individualmente ou definir um lembrete recorrente?`
+    });
+  }
+  if (!provoc.length) {
+    provoc.push({
+      title: "Semana sem alerta crítico",
+      text: "Sem entregáveis parados, sem KPI em risco e sem campos vazios. Já pensamos em aproveitar para subir produção do que está convertendo?"
+    });
+  }
+  return `
+    <div class="block">
+      <div class="block-header">
+        <h2 class="block-title"><span class="block-num">4</span> Provocações da semana</h2>
+        <p class="block-sub">Não são conclusões · são perguntas para o time decidir</p>
+      </div>
+      <div class="provoc-list">
+        ${provoc.map(p => `<div class="provoc"><p class="provoc-title">${p.title}</p><p class="provoc-text">${p.text}</p></div>`).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function buildStats(data) {
+  const total = data.length;
+  const concluido = data.filter(d => classifyStatus(d.status) === "concluido").length;
+  const parado = data.filter(d => classifyStatus(d.status) === "parado").length;
+  const abm = data.filter(d => (d.canal || "").toLowerCase().includes("abm"));
+  const totalContas = abm.reduce((s, d) => s + (d.realizado || 0), 0);
+  const provocCount = (data.filter(d => classifyStatus(d.status) === "parado").length) +
+                      (data.filter(d => !d.owner).length ? 1 : 0) +
+                      (data.filter(d => d.meta !== null && d.realizado !== null && d.meta > 0 && (d.realizado / d.meta) < 0.5).length);
+  return `
+    <div class="stats">
+      <div class="stat-card">
+        <p class="stat-label">Ações totais</p>
+        <p class="stat-value">${total}</p>
+        <p class="stat-sub">${concluido} concluídas</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Em risco</p>
+        <p class="stat-value">${parado}</p>
+        <p class="stat-sub">paradas / bloqueadas</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Contas ABM tocadas</p>
+        <p class="stat-value">${totalContas || "—"}</p>
+        <p class="stat-sub">acumulado</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Provocações abertas</p>
+        <p class="stat-value">${provocCount || 0}</p>
+        <p class="stat-sub">para o time decidir</p>
+      </div>
+    </div>
+  `;
+}
+
+function render() {
+  const data = applyFilter(RAW_DATA);
+  const html = buildStats(data) + buildBlock1(data) + buildBlock2(data) + buildBlock3(data) + buildBlock4(data);
+  document.getElementById("content").innerHTML = html;
+  const now = new Date();
+  document.getElementById("week-pill").textContent = "Semana de " + now.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+  document.getElementById("last-update").textContent = now.toLocaleString("pt-BR");
+}
+
+async function loadData() {
+  const status = document.getElementById("status-bar");
+  status.textContent = "Carregando dados…";
+  document.getElementById("content").innerHTML = '<div class="loading">Carregando dados da planilha…</div>';
+  try {
+    const url = CSV_URL + "&_=" + Date.now();
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status + " — verifique se a planilha está pública (Acesso geral · Qualquer pessoa com o link · Leitor)");
+    const text = await r.text();
+    const rows = parseCSV(text);
+    if (!rows.length) throw new Error("CSV vazio. Confira a aba publicada.");
+    RAW_DATA = processData(rows);
+    populateFilters(RAW_DATA);
+    render();
+    status.textContent = `Dados atualizados · ${RAW_DATA.length} ações lidas da planilha`;
+  } catch (e) {
+    document.getElementById("content").innerHTML = `
+      <div class="error">
+        <strong>Não consegui carregar a planilha.</strong><br>
+        ${e.message}<br><br>
+        Para o painel funcionar, a planilha precisa estar com <code>Acesso geral · Qualquer pessoa com o link · Leitor</code>. Se já estiver, tente:<br>
+        — recarregar a página (F5)<br>
+        — abrir em uma janela anônima para descartar cache<br>
+        — confirmar o gid da aba na URL <code>${CSV_URL}</code>
+      </div>
+    `;
+    status.textContent = "Erro ao carregar.";
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>
